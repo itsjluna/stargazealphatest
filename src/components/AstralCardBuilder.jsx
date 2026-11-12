@@ -452,11 +452,6 @@ export default function AstralCardBuilder() {
                   <span className="text-xs font-bold text-black dark:text-white uppercase tracking-wider">
                     Today&apos;s Astral Prediction
                   </span>
-                  {dailyPrediction && (
-                    <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                      Live Sky
-                    </span>
-                  )}
                 </div>
 
                 {dailyPrediction && (
@@ -474,7 +469,7 @@ export default function AstralCardBuilder() {
               {!dailyPrediction ? (
                 <div className="text-center py-3 space-y-3">
                   <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                    Synthesize today&apos;s real-time planetary transits with your natal placements and live celestial weather.
+                    Synthesize today&apos;s planetary transits with your natal placements.
                   </p>
                   <button
                     onClick={handleGenerateDailyPrediction}
@@ -484,7 +479,7 @@ export default function AstralCardBuilder() {
                     {isGeneratingPrediction ? (
                       <>
                         <RefreshCw size={13} className="animate-spin" />
-                        <span>Synthesizing Realtime Sky & API...</span>
+                        <span>Synthesizing Sky & Reading...</span>
                       </>
                     ) : (
                       <>
@@ -541,16 +536,15 @@ export default function AstralCardBuilder() {
                     </div>
                   </div>
 
-                  {/* Live API Dispatch */}
+                  {/* Daily Horoscope Dispatch */}
                   {dailyPrediction.liveHoroscope && (
-                    <div className="p-3.5 rounded-xl bg-black/[0.03] dark:bg-white/[0.03] border border-black/[0.08] dark:border-white/10 space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-mono text-zinc-500 uppercase flex items-center gap-1">
-                          <Sparkles size={11} className="text-amber-500" />
-                          Live Horoscope Dispatch
+                    <div className="p-3.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.06] dark:border-white/10 space-y-1.5">
+                      <div className="flex items-center justify-between pb-1 border-b border-black/[0.05] dark:border-white/[0.05]">
+                        <span className="text-[10px] font-mono text-zinc-500 uppercase block">
+                          Daily Dispatch
                         </span>
-                        <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                          Realtime API
+                        <span className="text-[10px] font-mono text-zinc-500">
+                          {dailyPrediction.date}
                         </span>
                       </div>
                       <p className="text-zinc-700 dark:text-zinc-300 leading-relaxed font-sans text-xs">

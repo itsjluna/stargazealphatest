@@ -1,15 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ZODIAC_SIGNS } from '../data/zodiacData';
 import { 
   getRealtimeSkyPositions, 
   fetchLiveDailyHoroscope 
 } from '../utils/astronomyCalculator';
 import { 
-  Radio, 
-  Sparkles, 
-  RefreshCw, 
-  Moon, 
-  Sun 
+  RefreshCw 
 } from 'lucide-react';
 
 export default function TransitsForecast({ onSelectSign }) {
@@ -29,7 +25,7 @@ export default function TransitsForecast({ onSelectSign }) {
     setTimeout(() => {
       setRealtimeSky(getRealtimeSkyPositions());
       setIsSyncingSky(false);
-    }, 400);
+    }, 300);
   };
 
   const handleFetchLiveHoroscope = async () => {
@@ -74,16 +70,12 @@ export default function TransitsForecast({ onSelectSign }) {
 
   return (
     <div className="space-y-6 pb-28">
-      {/* Realtime Transits Ticker */}
+      {/* Planetary Transits Ticker */}
       <div className="rounded-2xl glass-panel p-4 sm:p-5 space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-black/[0.08] dark:border-white/10">
           <div className="flex items-center gap-2">
-            <Radio size={14} className="text-emerald-500 animate-pulse" />
             <span className="text-xs font-bold text-black dark:text-white uppercase tracking-wider">
-              Realtime Planetary Transits
-            </span>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-              Live Sky
+              Planetary Transits
             </span>
           </div>
 
@@ -95,14 +87,14 @@ export default function TransitsForecast({ onSelectSign }) {
               onClick={handleSyncRealtimeSky}
               disabled={isSyncingSky}
               className="w-7 h-7 rounded-full glass-pill flex items-center justify-center text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-white transition-all active:scale-95"
-              title="Sync Realtime Sky"
+              title="Sync Sky Positions"
             >
               <RefreshCw size={12} className={isSyncingSky ? 'animate-spin' : ''} />
             </button>
           </div>
         </div>
 
-        {/* Live Planetary Grid */}
+        {/* Planetary Positions Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
           <div className="p-2.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.06] dark:border-white/[0.06] space-y-0.5 text-xs">
             <span className="font-mono text-zinc-500 text-[10px] uppercase block">Sun</span>
@@ -168,7 +160,7 @@ export default function TransitsForecast({ onSelectSign }) {
               </span>
             </div>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 font-mono">
-              Ruler: {selectedSign.rulingPlanet} • Today in {realtimeSky.season}
+              Ruler: {selectedSign.rulingPlanet} • {realtimeSky.season}
             </p>
           </div>
 
@@ -178,8 +170,8 @@ export default function TransitsForecast({ onSelectSign }) {
               disabled={loadingLive}
               className="px-3.5 py-1.5 rounded-full text-xs font-medium bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] dark:hover:bg-white/10 border border-black/10 dark:border-white/10 text-black dark:text-white transition-all active:scale-95 flex items-center gap-1.5"
             >
-              <Sparkles size={12} className={loadingLive ? 'animate-spin' : ''} />
-              <span>{loadingLive ? 'Connecting to API...' : currentLiveHoroscope ? 'Refresh Live Reading' : 'Fetch Live Horoscope'}</span>
+              <RefreshCw size={12} className={loadingLive ? 'animate-spin' : ''} />
+              <span>{loadingLive ? 'Updating Reading...' : currentLiveHoroscope ? 'Refresh Daily Reading' : 'Get Daily Reading'}</span>
             </button>
 
             {/* Category Switchers */}
@@ -206,15 +198,14 @@ export default function TransitsForecast({ onSelectSign }) {
           </div>
         </div>
 
-        {/* Live Horoscope from API if available */}
+        {/* Daily Horoscope Dispatch Card */}
         {currentLiveHoroscope && (
-          <div className="p-4 rounded-xl bg-black/[0.03] dark:bg-white/[0.03] border border-black/[0.08] dark:border-white/10 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono text-zinc-500 uppercase flex items-center gap-1.5">
-                <Sparkles size={11} className="text-amber-500" />
-                Live Dispatch for {selectedSign.name}
+          <div className="p-4 rounded-xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.06] dark:border-white/10 space-y-2">
+            <div className="flex items-center justify-between pb-1 border-b border-black/[0.05] dark:border-white/[0.05]">
+              <span className="text-[10px] font-mono text-zinc-500 uppercase block">
+                Daily Dispatch • {selectedSign.name}
               </span>
-              <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <span className="text-[10px] font-mono text-zinc-500">
                 {currentLiveHoroscope.date || 'Today'}
               </span>
             </div>

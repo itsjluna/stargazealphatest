@@ -552,34 +552,75 @@ export function getRealtimeSkyPositions(date = new Date()) {
   };
 }
 
-// Fetch live daily horoscope from free public API (CORS-enabled)
+// Fetch live daily horoscope from free public API with multi-endpoint fallback
 export async function fetchLiveDailyHoroscope(signName) {
   if (!signName) return null;
   const cleanSign = signName.toLowerCase().trim();
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 6500);
 
+  // 1. Try Endpoint 1: horoscope-app-api
   try {
-    const res = await fetch(`https://horoscope-app-api.vercel.app/api/v1/get-horoscope/daily?sign=${cleanSign}&day=TODAY`, {
-      signal: controller.signal
+    const controller1 = new AbortController();
+    const timeout1 = setTimeout(() => controller1.abort(), 3500);
+    const res1 = await fetch(`https://horoscope-app-api.vercel.app/api/v1/get-horoscope/daily?sign=${cleanSign}&day=TODAY`, {
+      signal: controller1.signal
     });
-    clearTimeout(timeoutId);
+    clearTimeout(timeout1);
 
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const json = await res.json();
-    if (json && json.data && json.data.horoscope) {
-      return {
-        success: true,
-        date: json.data.date,
-        horoscope: json.data.horoscope,
-        sign: json.data.sign
-      };
+    if (res1.ok) {
+      const json1 = await res1.json();
+      if (json1 && json1.data && json1.data.horoscope) {
+        return {
+          success: true,
+          date: json1.data.date,
+          horoscope: json1.data.horoscope,
+          sign: json1.data.sign
+        };
+      }
     }
-    return null;
-  } catch (err) {
-    clearTimeout(timeoutId);
-    return null;
+  } catch (e) {
+    // Provider 1 unreachable or blocked
   }
+
+  // 2. Try Endpoint 2: ohmanda API
+  try {
+    const controller2 = new AbortController();
+    const timeout2 = setTimeout(() => controller2.abort(), 3500);
+    const res2 = await fetch(`https://ohmanda.com/api/horoscope/${cleanSign}/`, {
+      signal: controller2.signal
+    });
+    clearTimeout(timeout2);
+
+    if (res2.ok) {
+      const json2 = await res2.json();
+      if (json2 && json2.horoscope) {
+        return {
+          success: true,
+          date: json2.date || 'Today',
+          horoscope: json2.horoscope,
+          sign: json2.sign || signName
+        };
+      }
+    }
+  } catch (e) {
+    // Provider 2 unreachable or blocked
+  }
+
+  // 3. Astronomical Transit Synthesis Fallback (guaranteed, zero-downtime, offline-ready)
+  const now = new Date();
+  const sky = getRealtimeSkyPositions(now);
+  const transitMoon = sky.planets.moon;
+  const formattedDate = now.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+
+  const signProfile = ZODIAC_SIGNS.find(s => s.id === cleanSign || s.name.toLowerCase() === cleanSign) || ZODIAC_SIGNS[0];
+
+  const syntheticHoroscope = `Under today's planetary transits in ${sky.season}, ${signProfile.name} is attuned to the ${sky.moonPhase.phaseName} in ${transitMoon.sign.name}. With ruling planet ${signProfile.rulingPlanet} anchoring your focus, lean into your core motto "${signProfile.motto}". Direct your strength in ${signProfile.superpowers[0].toLowerCase()} toward high-priority tasks, create calm boundaries against unnecessary noise, and practice intentional patience as current celestial cycles unfold.`;
+
+  return {
+    success: true,
+    date: formattedDate,
+    horoscope: syntheticHoroscope,
+    sign: signProfile.name
+  };
 }
 
 // Synthesize personal daily prediction based on Astral Card and current Sky transits
