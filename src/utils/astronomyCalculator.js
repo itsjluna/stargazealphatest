@@ -488,3 +488,175 @@ export function loadFriendsCharts() {
     return null;
   }
 }
+
+// Realtime Sky & Transits Calculation
+export function getRealtimeSkyPositions(date = new Date()) {
+  const year = date.getUTCFullYear();
+  const month = date.getUTCMonth() + 1;
+  const day = date.getUTCDate();
+  const hour = date.getUTCHours();
+  const minute = date.getUTCMinutes();
+
+  const jd = getJulianDate(year, month, day, hour, minute, 0);
+
+  const sunDeg = calculateSun(jd);
+  const moonDeg = calculateMoon(jd);
+  const mercuryDeg = calculateGeocentricPlanet('Mercury', jd);
+  const venusDeg = calculateGeocentricPlanet('Venus', jd);
+  const marsDeg = calculateGeocentricPlanet('Mars', jd);
+  const jupiterDeg = calculateGeocentricPlanet('Jupiter', jd);
+  const saturnDeg = calculateGeocentricPlanet('Saturn', jd);
+
+  const sun = degreeToZodiac(sunDeg);
+  const moon = degreeToZodiac(moonDeg);
+  const mercury = degreeToZodiac(mercuryDeg);
+  const venus = degreeToZodiac(venusDeg);
+  const mars = degreeToZodiac(marsDeg);
+  const jupiter = degreeToZodiac(jupiterDeg);
+  const saturn = degreeToZodiac(saturnDeg);
+
+  // Calculate Moon Phase & illumination
+  const phaseAngle = norm360(moonDeg - sunDeg);
+  const illumination = Math.round((1 - Math.cos(degToRad(phaseAngle))) / 2 * 100);
+
+  let phaseName = 'New Moon';
+  if (phaseAngle >= 22.5 && phaseAngle < 67.5) phaseName = 'Waxing Crescent';
+  else if (phaseAngle >= 67.5 && phaseAngle < 112.5) phaseName = 'First Quarter';
+  else if (phaseAngle >= 112.5 && phaseAngle < 157.5) phaseName = 'Waxing Gibbous';
+  else if (phaseAngle >= 157.5 && phaseAngle < 202.5) phaseName = 'Full Moon';
+  else if (phaseAngle >= 202.5 && phaseAngle < 247.5) phaseName = 'Waning Gibbous';
+  else if (phaseAngle >= 247.5 && phaseAngle < 292.5) phaseName = 'Last Quarter';
+  else if (phaseAngle >= 292.5 && phaseAngle < 337.5) phaseName = 'Waning Crescent';
+
+  const season = `${sun.sign.name} Season`;
+
+  return {
+    jd,
+    timestamp: date.toISOString(),
+    formattedDate: date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }),
+    season,
+    moonPhase: {
+      phaseName,
+      illumination,
+      angle: Math.round(phaseAngle)
+    },
+    planets: {
+      sun,
+      moon,
+      mercury,
+      venus,
+      mars,
+      jupiter,
+      saturn
+    }
+  };
+}
+
+// Fetch live daily horoscope from free public API (CORS-enabled)
+export async function fetchLiveDailyHoroscope(signName) {
+  if (!signName) return null;
+  const cleanSign = signName.toLowerCase().trim();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 6500);
+
+  try {
+    const res = await fetch(`https://horoscope-app-api.vercel.app/api/v1/get-horoscope/daily?sign=${cleanSign}&day=TODAY`, {
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    if (json && json.data && json.data.horoscope) {
+      return {
+        success: true,
+        date: json.data.date,
+        horoscope: json.data.horoscope,
+        sign: json.data.sign
+      };
+    }
+    return null;
+  } catch (err) {
+    clearTimeout(timeoutId);
+    return null;
+  }
+}
+
+// Synthesize personal daily prediction based on Astral Card and current Sky transits
+export function generateAstralDailyPrediction(chart, liveHoroscope = null) {
+  if (!chart) return null;
+  const now = new Date();
+  const realtimeSky = getRealtimeSkyPositions(now);
+
+  const transitSun = realtimeSky.planets.sun;
+  const transitMoon = realtimeSky.planets.moon;
+
+  // Compare Transit Moon with Natal Sun & Moon
+  const natalSunDeg = chart.sun?.totalDegree ?? 0;
+  const natalMoonDeg = chart.moon?.totalDegree ?? 0;
+
+  const sunDiff = Math.min(Math.abs(transitMoon.totalDegree - natalSunDeg), 360 - Math.abs(transitMoon.totalDegree - natalSunDeg));
+  const moonDiff = Math.min(Math.abs(transitMoon.totalDegree - natalMoonDeg), 360 - Math.abs(transitMoon.totalDegree - natalMoonDeg));
+
+  // Determine transit aspect relationship
+  let transitRelationship = 'Ambient Lunar Flow';
+  let harmonyScore = 85;
+
+  if (sunDiff <= 10 || moonDiff <= 10) {
+    transitRelationship = 'Conjunction • Heightened Emotional Resonance';
+    harmonyScore = 96;
+  } else if (Math.abs(sunDiff - 120) <= 8 || Math.abs(moonDiff - 120) <= 8) {
+    transitRelationship = 'Trine • Flow State & Ease of Expression';
+    harmonyScore = 94;
+  } else if (Math.abs(sunDiff - 60) <= 6 || Math.abs(moonDiff - 60) <= 6) {
+    transitRelationship = 'Sextile • Opportunities for Collaboration';
+    harmonyScore = 90;
+  } else if (Math.abs(sunDiff - 90) <= 8 || Math.abs(moonDiff - 90) <= 8) {
+    transitRelationship = 'Square • Motivational Friction & Breakthroughs';
+    harmonyScore = 78;
+  } else if (Math.abs(sunDiff - 180) <= 8 || Math.abs(moonDiff - 180) <= 8) {
+    transitRelationship = 'Opposition • Clarity Across Polarities';
+    harmonyScore = 82;
+  }
+
+  const sunSignName = chart.sun?.sign?.name || chart.sun?.signName || 'Aries';
+  const moonSignName = chart.moon?.sign?.name || chart.moon?.signName || 'Leo';
+  const risingSignName = chart.rising?.sign?.name || chart.rising?.signName || 'Sagittarius';
+
+  const elements = chart.elementPercentages || { Fire: 25, Earth: 25, Air: 25, Water: 25 };
+  let primaryElement = 'Fire';
+  let maxVal = -1;
+  for (const [el, val] of Object.entries(elements)) {
+    if (val > maxVal) {
+      maxVal = val;
+      primaryElement = el;
+    }
+  }
+
+  const elementAdviceMap = {
+    Fire: 'Channel creative impulses into one meaningful priority before initiating new ventures.',
+    Earth: 'Take practical, tangible steps and resist rushing decisions that require steady pacing.',
+    Air: 'Articulate thoughts objectively, take time away from screen noise, and verify details.',
+    Water: 'Protect your emotional bandwidth and trust your subtle intuitive compass today.'
+  };
+
+  return {
+    date: now.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' }),
+    isoDate: now.toISOString().split('T')[0],
+    harmonyScore,
+    transitRelationship,
+    currentSky: {
+      season: realtimeSky.season,
+      moonPhase: realtimeSky.moonPhase.phaseName,
+      moonIllumination: realtimeSky.moonPhase.illumination,
+      moonSign: transitMoon.sign.name
+    },
+    insights: {
+      solarMission: `With your Sun in ${sunSignName} illuminated by ${realtimeSky.season}, your core focus is on purposeful clarity and aligning with what sustains your integrity.`,
+      lunarMood: `As the ${realtimeSky.moonPhase.phaseName} moves through ${transitMoon.sign.name}, your inner ${moonSignName} Moon asks for thoughtful discernment and balanced emotional boundaries.`,
+      outerNavigation: `Through your ${risingSignName} Rising, lead with steady confidence in conversation and collaborative efforts.`,
+      elementAdvice: elementAdviceMap[primaryElement] || elementAdviceMap.Fire
+    },
+    liveHoroscope: liveHoroscope ? liveHoroscope.horoscope : null
+  };
+}

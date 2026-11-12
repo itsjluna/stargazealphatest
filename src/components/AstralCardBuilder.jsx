@@ -4,7 +4,9 @@ import {
   GLOBAL_CITIES, 
   calculateFullNatalChart, 
   saveUserChart, 
-  loadUserChart 
+  loadUserChart,
+  generateAstralDailyPrediction,
+  fetchLiveDailyHoroscope
 } from '../utils/astronomyCalculator';
 import CityTimezonePicker from './CityTimezonePicker';
 import { 
@@ -12,7 +14,8 @@ import {
   Check, 
   RefreshCw,
   SlidersHorizontal,
-  Compass
+  Compass,
+  Sparkles
 } from 'lucide-react';
 
 export default function AstralCardBuilder() {
@@ -35,6 +38,9 @@ export default function AstralCardBuilder() {
   const [copied, setCopied] = useState(false);
   const [chart, setChart] = useState(null);
 
+  const [dailyPrediction, setDailyPrediction] = useState(null);
+  const [isGeneratingPrediction, setIsGeneratingPrediction] = useState(false);
+
   useEffect(() => {
     const existing = loadUserChart();
     if (existing) {
@@ -45,6 +51,14 @@ export default function AstralCardBuilder() {
       if (existing.cityName) setCityName(existing.cityName);
       setChart(existing);
     }
+
+    try {
+      const todayIso = new Date().toISOString().split('T')[0];
+      const cached = localStorage.getItem(`stargaze_daily_prediction_${todayIso}`);
+      if (cached) {
+        setDailyPrediction(JSON.parse(cached));
+      }
+    } catch (e) {}
   }, []);
 
   const handleCalculate = (e) => {
@@ -88,6 +102,32 @@ export default function AstralCardBuilder() {
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleGenerateDailyPrediction = async () => {
+    setIsGeneratingPrediction(true);
+    const currentChart = chart || {
+      name: name || 'Astral Traveler',
+      sun: { sign: activeSun, signName: activeSun.name, totalDegree: activeSun.id === 'aries' ? 15 : 45 },
+      moon: { sign: activeMoon, signName: activeMoon.name, totalDegree: 120 },
+      rising: { sign: activeRising, signName: activeRising.name, totalDegree: 240 },
+      elementPercentages
+    };
+
+    let liveHoro = null;
+    try {
+      liveHoro = await fetchLiveDailyHoroscope(activeSun.name);
+    } catch (e) {}
+
+    const synthesized = generateAstralDailyPrediction(currentChart, liveHoro);
+    setDailyPrediction(synthesized);
+
+    try {
+      const todayIso = new Date().toISOString().split('T')[0];
+      localStorage.setItem(`stargaze_daily_prediction_${todayIso}`, JSON.stringify(synthesized));
+    } catch (e) {}
+
+    setIsGeneratingPrediction(false);
   };
 
   return (
@@ -402,6 +442,125 @@ export default function AstralCardBuilder() {
               </div>
             )}
           </div>
+          )}
+
+          {/* Today's Astral Prediction Section */}
+          {(chart || isManualOverride) && (
+            <div className="w-full max-w-md mt-4 rounded-2xl glass-panel p-5 sm:p-6 space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-black/[0.08] dark:border-white/10">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-black dark:text-white uppercase tracking-wider">
+                    Today&apos;s Astral Prediction
+                  </span>
+                  {dailyPrediction && (
+                    <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                      Live Sky
+                    </span>
+                  )}
+                </div>
+
+                {dailyPrediction && (
+                  <button
+                    onClick={handleGenerateDailyPrediction}
+                    disabled={isGeneratingPrediction}
+                    className="w-7 h-7 rounded-full glass-pill flex items-center justify-center text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-white transition-all active:scale-95"
+                    title="Refresh Today's Prediction"
+                  >
+                    <RefreshCw size={12} className={isGeneratingPrediction ? "animate-spin" : ""} />
+                  </button>
+                )}
+              </div>
+
+              {!dailyPrediction ? (
+                <div className="text-center py-3 space-y-3">
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                    Synthesize today&apos;s real-time planetary transits with your natal placements and live celestial weather.
+                  </p>
+                  <button
+                    onClick={handleGenerateDailyPrediction}
+                    disabled={isGeneratingPrediction}
+                    className="px-5 py-2.5 rounded-full text-xs font-semibold bg-black text-white dark:bg-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-all active:scale-95 inline-flex items-center gap-1.5 shadow-sm"
+                  >
+                    {isGeneratingPrediction ? (
+                      <>
+                        <RefreshCw size={13} className="animate-spin" />
+                        <span>Synthesizing Realtime Sky & API...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={13} />
+                        <span>Get Today&apos;s Astral Prediction</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3.5 text-xs">
+                  <div className="flex items-center justify-between pb-2 border-b border-black/[0.06] dark:border-white/[0.06]">
+                    <div>
+                      <span className="text-sm font-bold text-black dark:text-white block font-mono">
+                        {dailyPrediction.harmonyScore}% Daily Harmony
+                      </span>
+                      <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-mono">
+                        {dailyPrediction.transitRelationship}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500">
+                      {dailyPrediction.date}
+                    </span>
+                  </div>
+
+                  {/* Core Insights */}
+                  <div className="space-y-2">
+                    <div className="p-3 rounded-xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.06] dark:border-white/[0.06] space-y-1">
+                      <span className="text-[10px] font-mono text-zinc-500 uppercase block">Solar Mission</span>
+                      <p className="text-zinc-700 dark:text-zinc-300 leading-relaxed">
+                        {dailyPrediction.insights.solarMission}
+                      </p>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.06] dark:border-white/[0.06] space-y-1">
+                      <span className="text-[10px] font-mono text-zinc-500 uppercase block">Lunar Subconscious</span>
+                      <p className="text-zinc-700 dark:text-zinc-300 leading-relaxed">
+                        {dailyPrediction.insights.lunarMood}
+                      </p>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.06] dark:border-white/[0.06] space-y-1">
+                      <span className="text-[10px] font-mono text-zinc-500 uppercase block">Rising Navigation</span>
+                      <p className="text-zinc-700 dark:text-zinc-300 leading-relaxed">
+                        {dailyPrediction.insights.outerNavigation}
+                      </p>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.06] dark:border-white/[0.06] space-y-1">
+                      <span className="text-[10px] font-mono text-zinc-500 uppercase block">Element Grounding</span>
+                      <p className="text-zinc-700 dark:text-zinc-300 leading-relaxed">
+                        {dailyPrediction.insights.elementAdvice}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Live API Dispatch */}
+                  {dailyPrediction.liveHoroscope && (
+                    <div className="p-3.5 rounded-xl bg-black/[0.03] dark:bg-white/[0.03] border border-black/[0.08] dark:border-white/10 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono text-zinc-500 uppercase flex items-center gap-1">
+                          <Sparkles size={11} className="text-amber-500" />
+                          Live Horoscope Dispatch
+                        </span>
+                        <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                          Realtime API
+                        </span>
+                      </div>
+                      <p className="text-zinc-700 dark:text-zinc-300 leading-relaxed font-sans text-xs">
+                        {dailyPrediction.liveHoroscope}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           )}
         </div>
 
