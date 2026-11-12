@@ -48,7 +48,7 @@ export default function ElementsExplorer({ onSelectSign }) {
       {/* Elements View */}
       {activeTab === 'elements' && (
         <div className="space-y-5">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 max-w-3xl mx-auto py-2">
             {Object.keys(ELEMENTS).map((key) => {
               const el = ELEMENTS[key];
               const ElIcon = getElementIcon(key);
@@ -58,23 +58,25 @@ export default function ElementsExplorer({ onSelectSign }) {
                 <button
                   key={key}
                   onClick={() => setSelectedElement(key)}
-                  className={`p-3.5 sm:p-4 rounded-xl border text-left transition-colors ${
+                  className={`w-32 h-32 sm:w-36 sm:h-36 rounded-full mx-auto flex flex-col items-center justify-center p-3 text-center transition-all duration-200 active:scale-95 ${
                     isSelected
-                      ? 'bg-black/[0.06] dark:bg-white/[0.08] border-black/30 dark:border-white/30 text-black dark:text-white'
-                      : 'glass-card text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-white'
+                      ? 'bg-black/[0.06] dark:bg-white/[0.08] border-2 border-black dark:border-white text-black dark:text-white shadow-md scale-105'
+                      : 'glass-card border border-black/10 dark:border-white/10 text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-white hover:border-black/20 dark:hover:border-white/20'
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[10px] font-mono font-bold" style={{ color: el.color }}>
-                      {el.code}
-                    </span>
-                    <ElIcon size={16} style={{ color: el.color }} />
+                  <div 
+                    className="w-8 h-8 rounded-full flex items-center justify-center mb-1 bg-black/[0.03] dark:bg-white/[0.05]"
+                  >
+                    <ElIcon size={18} style={{ color: el.color }} />
                   </div>
-                  <h3 className="font-bold text-black dark:text-white text-sm">
+                  <h3 className="font-bold text-black dark:text-white text-sm sm:text-base leading-tight">
                     {el.name}
                   </h3>
-                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-                    {el.signs.join(', ')}
+                  <span className="text-[10px] font-mono font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mt-0.5">
+                    {el.code}
+                  </span>
+                  <p className="text-[9px] text-zinc-400 dark:text-zinc-500 font-mono mt-0.5 line-clamp-1 px-1">
+                    {el.signs.join(' • ')}
                   </p>
                 </button>
               );
