@@ -11,7 +11,8 @@ import {
   Copy, 
   Check, 
   RefreshCw,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Compass
 } from 'lucide-react';
 
 export default function AstralCardBuilder() {
